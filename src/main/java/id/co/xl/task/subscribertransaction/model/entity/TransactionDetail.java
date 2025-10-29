@@ -6,5 +6,8 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class TransactionDetail {
-    private String msisdn;
+    private Integer yr;
+    private Integer mo;
+    private java.math.BigDecimal totalAmount;
+    private Long totalTxn;
 }

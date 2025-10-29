@@ -13,6 +13,7 @@ import java.util.List;
 
 @Repository
 public class TransactionRepositoryImpl implements TransactionRepository {
+
     @Autowired
     private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
@@ -21,7 +22,13 @@ public class TransactionRepositoryImpl implements TransactionRepository {
 
     @Override
     public List<TransactionDetail> fetchByMSISDN(String msisdn) {
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        return namedParameterJdbcTemplate.query(queryFetchByMSISDN, params, BeanPropertyRowMapper.newInstance(TransactionDetail.class));
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("msisdn", msisdn);
+
+        return namedParameterJdbcTemplate.query(
+                queryFetchByMSISDN,
+                params,
+                BeanPropertyRowMapper.newInstance(TransactionDetail.class)
+        );
     }
 }

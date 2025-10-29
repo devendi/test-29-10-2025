@@ -11,24 +11,54 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Slf4j
 @Service
 public class PinService {
+
     @Autowired
     private WebClient genericWebClient;
 
-    public GetPinRs getPin(String msisdn) {
-        GetPinRs getPinRs = new GetPinRs().setStatus("error");
-        String uri = "/subscriber/628191234561/pin";
+    /** Memanggil service validasi PIN. */
+    public GetPinRs getPin(String msisdn, String pin) {
         try {
-            ResponseEntity<GetPinRs> getPinRsResponseEntity = this.genericWebClient.get()
-                    .uri(uri).retrieve()
+            ResponseEntity<GetPinRs> res = genericWebClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/pin/validate")
+                            .queryParam("msisdn", msisdn)
+                            .queryParam("pin", pin)
+                            .build())
+                    .retrieve()
                     .toEntity(GetPinRs.class)
                     .block();
 
-            log.info("[GET HTTP RESPONSE - SUCCESS][{}][{}][{}]", uri, getPinRsResponseEntity.getStatusCode(), getPinRsResponseEntity.getBody());
-            getPinRs = getPinRsResponseEntity.getBody();
-        } catch (WebClientResponseException ex) {
-            log.info("[GET HTTP RESPONSE - FAILED][{}][{}][{}]", uri, ex.getStatusCode(), ex.getResponseBodyAsString());
-        }
+            if (res == null) {
+                log.warn("[GET HTTP RESPONSE - NULL]");
+                return error("502", "pin service no response");
+            }
 
-        return getPinRs;
+            log.info("[GET HTTP RESPONSE - SUCCESS][status={}]", res.getStatusCode());
+            return res.getBody();
+
+        } catch (WebClientResponseException ex) {
+            log.warn("[GET HTTP RESPONSE - FAILED][status={}][body={}]", ex.getStatusCode(), ex.getResponseBodyAsString());
+            return error(String.valueOf(ex.getRawStatusCode()), "pin service error");
+        } catch (Exception ex) {
+            log.error("[GET HTTP RESPONSE - ERROR]", ex);
+            return error("500", "pin service unexpected error");
+        }
+    }
+
+    /** Helper untuk membuat respons error standar. */
+    private GetPinRs error(String code, String message) {
+        GetPinRs err = new GetPinRs();
+        err.setStatus("error");
+        err.setCode(code);
+        err.setMessage(message);
+        err.setData(null);
+        return err;
+    }
+
+    /** True jika data respons menyatakan VALID (case-insensitive). */
+    public boolean isPinValid(String msisdn, String pin) {
+        GetPinRs rs = getPin(msisdn, pin);
+        return rs != null && rs.getData() != null && "VALID".equalsIgnoreCase(rs.getData().toString());
     }
 }

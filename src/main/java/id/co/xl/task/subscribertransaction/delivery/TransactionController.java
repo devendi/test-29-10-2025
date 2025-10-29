@@ -12,7 +12,7 @@ public class TransactionController {
     private TransactionUsecase transactionUsecase;
 
     @PostMapping("/api/transaction/summary")
-    public ResponseEntity<?> getTransactionSummary(@RequestBody()GetMonthlyTransactionRq bodyRq) {
-        return transactionUsecase.getTransactionSummary(bodyRq.getMsisdn());
+    public ResponseEntity<?> getTransactionSummary(@RequestBody GetMonthlyTransactionRq bodyRq) {
+        return transactionUsecase.getTransactionSummary(bodyRq.getMsisdn(), bodyRq.getPin());
     }
 }

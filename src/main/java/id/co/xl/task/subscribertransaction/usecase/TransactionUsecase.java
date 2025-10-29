@@ -12,27 +12,37 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-
 @Slf4j
 @Component
 public class TransactionUsecase {
-    @Autowired
-    private TransactionRepository transactionRepository;
+    @Autowired private TransactionRepository transactionRepository;
+    @Autowired private PinService pinService;
 
-    @Autowired
-    private PinService pinService;
+    public ResponseEntity<Object> getTransactionSummary(String msisdn, String pin) {
+        // 1) validate PIN
+        if (!pinService.isPinValid(msisdn, pin)) {
+            GenericResponse<Void> fail = new GenericResponse<Void>()
+                .setStatus("error").setCode("PIN_INVALID").setMessage("PIN tidak valid");
+            return new ResponseEntity<>(fail, HttpStatus.FORBIDDEN);
+        }
 
-    public ResponseEntity<Object> getTransactionSummary(String msisdn) {
-        GenericResponse<List<TransactionDetail>> detailGenericResponse = new GenericResponse<List<TransactionDetail>>()
-                .setCode("00")
-                .setMessage("success")
-                .setStatus("ok");
+        // 2) fetch monthly summary
+        List<TransactionDetail> list = transactionRepository.fetchByMSISDN(msisdn);
 
-        List<TransactionDetail> transactionDetailList = transactionRepository.fetchByMSISDN(msisdn);
-
-        GetPinRs getPinRs = pinService.getPin(msisdn);
-
-        detailGenericResponse.setData(transactionDetailList);
-        return new ResponseEntity<>(detailGenericResponse, HttpStatus.OK);
+        // 3) bangun response
+        GenericResponse<Object> ok = new GenericResponse<>()
+            .setStatus("ok").setCode("00").setMessage("success")
+            .setData(new java.util.HashMap<String, Object>() {{
+                put("msisdn", msisdn);
+                put("currency", "IDR");
+                put("months", list.stream().map(it -> new java.util.HashMap<String,Object>() {{
+                    put("year", it.getYr());
+                    put("month", it.getMo());
+                    put("total_amount", it.getTotalAmount());
+                    put("total_txn", it.getTotalTxn());
+                }}).toList());
+            }});
+        return new ResponseEntity<>(ok, HttpStatus.OK);
     }
 }
+
